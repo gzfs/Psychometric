@@ -370,7 +370,7 @@ const QuizResults = ({ responses }: { responses: Record<string, string> }) => {
 
   let totalScore = 0;
 
-  allQuestions.forEach((question) => {
+  allQuestions.forEach((question: any) => {
     const trait = quizData.traits.find((t) =>
       t.questions.some((q) => q.id === question.id)
     )!.name;
