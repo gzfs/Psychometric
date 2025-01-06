@@ -30,6 +30,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import ShapValuesChart from "./shap-visualization";
 
 const formSchema = z.object({
   person_age: z.number().int().positive(),
@@ -338,12 +339,13 @@ export default function AIModelTest() {
             </Alert>
           )}
           {result && (
-            <div className="w-full">
-              <h3 className="text-lg font-semibold mb-2">AI Model Result:</h3>
-              <pre className="bg-muted p-4 rounded-md overflow-x-auto">
-                <code>{result}</code>
-              </pre>
-            </div>
+            // <div className="w-full">
+            //   <h3 className="text-lg font-semibold mb-2">AI Model Result:</h3>
+            //   <pre className="bg-muted p-4 rounded-md overflow-x-auto">
+            //     <code>{}</code>
+            //   </pre>
+            // </div>
+            <ShapValuesChart originalValues={JSON.parse(result).data.xai} />
           )}
         </CardFooter>
       </Card>

@@ -326,60 +326,102 @@ const QuizQuestion = ({
   );
 };
 
+// Scoring functions
+const interpretScore = (score: number) => {
+  if (score >= 65) return "Low Credit Risk";
+  else if (score >= 55) return "Moderate Credit Risk";
+  else if (score >= 40) return "High Credit Risk";
+  else return "Very High Credit Risk";
+};
+
+const personalityCombination = (scores: Record<string, number>) => {
+  const combo = [];
+
+  if (scores["Delayed Gratification"] > 20)
+    combo.push("Patient, Future-focused");
+  else combo.push("Impulsive, Short-term focused");
+
+  if (scores["Integrity"] > 20) combo.push("Highly Honest and Responsible");
+  else combo.push("Ethically Inconsistent");
+
+  if (scores["Locus of Control"] > 18)
+    combo.push("Self-driven and Accountable");
+  else combo.push("Blames External Factors");
+
+  if (scores["Materialism"] < 12) combo.push("Values Stability over Luxury");
+  else combo.push("Materialistic and Status-driven");
+
+  if (scores["Risk Aversion"] > 18)
+    combo.push("Risk Averse, Security-oriented");
+  else combo.push("Risk-tolerant, Seeks High Rewards");
+
+  return combo;
+};
+
 // QuizResults component
-const QuizResults = ({ quizResults }: { quizResults: any }) => {
+const QuizResults = ({ responses }: { responses: Record<string, string> }) => {
+  const traitScores: Record<string, number> = {
+    "Delayed Gratification": 0,
+    Integrity: 0,
+    "Locus of Control": 0,
+    Materialism: 0,
+    "Risk Aversion": 0,
+  };
+
+  let totalScore = 0;
+
+  allQuestions.forEach((question) => {
+    const trait = quizData.traits.find((t) =>
+      t.questions.some((q) => q.id === question.id)
+    )!.name;
+    const response = responses[question.id];
+    const score = question.options[response]?.score || 0;
+    traitScores[trait] += score;
+    totalScore += score;
+  });
+
+  const riskLevel = interpretScore(totalScore);
+  const personalityTraits = personalityCombination(traitScores);
+
   return (
-    quizResults && (
-      <Card className="w-[450px]">
-        <CardHeader>
-          <CardTitle>Your CredLens Profile</CardTitle>
-          <CardDescription>
-            Based on your psychometric assessment
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <h3 className="font-semibold">
-              Overall Credit Risk: {quizResults?.credit_risk}
-            </h3>
-            <Progress
-              value={(quizResults?.total_score / 76) * 100}
-              className="w-full mt-2"
-            />
-            <p className="text-sm text-muted-foreground mt-1">
-              Score: {quizResults?.total_score} / 76
-            </p>
-          </div>
-          <div>
-            <h3 className="font-semibold">Trait Breakdown:</h3>
-            <ul className="list-disc list-inside">
-              {Object.entries(quizResults?.trait_scores).map(
-                ([trait, score]: [trait: any, score: any]) => (
-                  <li key={trait}>
-                    {trait}: {score}
-                  </li>
-                )
-              )}
-            </ul>
-          </div>
-          <div>
-            <h3 className="font-semibold">Your Financial Personality:</h3>
-            <ul className="list-disc list-inside">
-              {quizResults?.top_personality_traits.map(
-                (trait: any, index: any) => (
-                  <li key={index}>{trait}</li>
-                )
-              )}
-            </ul>
-          </div>
-        </CardContent>
-        <CardFooter>
-          <Button onClick={() => window.location.reload()} className="w-full">
-            Retake Quiz
-          </Button>
-        </CardFooter>
-      </Card>
-    )
+    <Card className="w-[450px]">
+      <CardHeader>
+        <CardTitle>Your CredLens Profile</CardTitle>
+        <CardDescription>Based on your psychometric assessment</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div>
+          <h3 className="font-semibold">Overall Credit Risk: {riskLevel}</h3>
+          <Progress value={(totalScore / 76) * 100} className="w-full mt-2" />
+          <p className="text-sm text-muted-foreground mt-1">
+            Score: {totalScore} / 76
+          </p>
+        </div>
+        <div>
+          <h3 className="font-semibold">Trait Breakdown:</h3>
+          <ul className="list-disc list-inside">
+            {Object.entries(traitScores).map(([trait, score]) => (
+              <li key={trait}>
+                {trait}: {score}
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div>
+          <h3 className="font-semibold">Your Financial Personality:</h3>
+          <ul className="list-disc list-inside">
+            {personalityTraits.map((trait, index) => (
+              <li key={index}>{trait}</li>
+            ))}
+          </ul>
+        </div>
+      </CardContent>
+      <CardFooter>
+        <Button onClick={() => window.location.reload()} className="w-full">
+          Retake Quiz
+        </Button>
+      </CardFooter>
+    </Card>
   );
 };
 
@@ -389,20 +431,6 @@ const QuizContainer = ({ id }: { id: string }) => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [responses, setResponses] = useState<Record<string, string>>({});
   const [quizCompleted, setQuizCompleted] = useState(false);
-  const [quizResult, setQuizResult] = useState();
-
-  const handleStart = () => {
-    setQuizStarted(true);
-  };
-
-  const handleAnswer = (questionId: string, option: string) => {
-    setResponses((prev) => ({ ...prev, [questionId]: option }));
-    if (currentQuestionIndex < allQuestions.length - 1) {
-      setCurrentQuestionIndex((prevIndex) => prevIndex + 1);
-    } else {
-      setQuizCompleted(true);
-    }
-  };
 
   useEffect(() => {
     if (quizCompleted) {
@@ -416,7 +444,7 @@ const QuizContainer = ({ id }: { id: string }) => {
         .then((res) => res.json())
         .then((data) => {
           if (data.data) {
-            setQuizResult(data.data);
+            console.log(data.data);
             fetch("http://10.42.98.216:5000/misc/update-id", {
               method: "POST",
               headers: {
@@ -432,12 +460,25 @@ const QuizContainer = ({ id }: { id: string }) => {
     }
   }, [quizCompleted]);
 
+  const handleStart = () => {
+    setQuizStarted(true);
+  };
+
+  const handleAnswer = (questionId: string, option: string) => {
+    setResponses((prev) => ({ ...prev, [questionId]: option }));
+    if (currentQuestionIndex < allQuestions.length - 1) {
+      setCurrentQuestionIndex((prevIndex) => prevIndex + 1);
+    } else {
+      setQuizCompleted(true);
+    }
+  };
+
   if (!quizStarted) {
     return <QuizStart onStart={handleStart} />;
   }
 
   if (quizCompleted) {
-    return <QuizResults quizResults={quizResult} />;
+    return <QuizResults responses={responses} />;
   }
 
   return (
@@ -468,10 +509,10 @@ const QuizContainer = ({ id }: { id: string }) => {
 };
 
 export default function PsychometricQuiz() {
-  const searchParams = useParams<{ id: string }>();
+  const { id } = useParams<{ id: string }>();
   return (
     <div className="flex items-center justify-center min-h-screen bg-background">
-      <QuizContainer id={searchParams.id} />
+      <QuizContainer id={id} />
     </div>
   );
 }
